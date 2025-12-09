@@ -16,6 +16,8 @@ const UserSchema = new Schema(
       required: [true, "Password is required"],
       select: false, // Don't return password by default
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
   { timestamps: true }
 );
