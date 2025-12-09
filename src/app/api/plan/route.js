@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbConnect'; // Your DB connection helper
-import User from '@/models/User';
-import Plan from '@/models/Plan';
 import { verifyJwt } from '../../../lib/auth';
+import connectToDatabase from '../../../lib/db';
+import Plan from '../../../models/Plan';
+import User from '../../../models/User';
 
 export async function GET(req) {
   await dbConnect();
