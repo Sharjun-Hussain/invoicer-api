@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "../../../lib/db";
 import User from "../../../models/User";
+import Plan from "../../../models/Plan"; // Import Plan model
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -18,12 +19,12 @@ export async function POST(req) {
 
     await connectToDatabase();
 
-    // 2. Find User (explicitly select password because select:false in model)
+    // 2. Find User
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
       return NextResponse.json(
-        { message: "Invalid credentials" }, // Generic message for security
+        { message: "Invalid credentials" },
         { status: 401 }
       );
     }
@@ -38,22 +39,61 @@ export async function POST(req) {
       );
     }
 
-    // 4. Generate JWT Token
+    // 4. Fetch Plan Details
+    // We need the plan details (limits) to send to the frontend
+    // Default to 'basic' if for some reason the user has no planId
+    const planId = user.subscription?.planId || 'basic';
+    const planDetails = await Plan.findOne({ id: planId });
+
+    // Fallback if plan database is empty (optional safety)
+    const limits = planDetails?.limits || { 
+      invoices: 50, 
+      teamMembers: 1, 
+      exportPDF: true, 
+      customTemplates: false 
+    };
+
+    // 5. Generate JWT Token
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user._id, email: user.email }, // Keeping your userId convention
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
+    // 6. Construct the Response
     return NextResponse.json(
       {
+        success: true, // Standardize success flag
         message: "Login successful",
+        token,
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
+          
+          // Full Subscription Object
+          subscription: {
+            plan: planId,
+            status: user.subscription?.status || 'active',
+            startDate: user.subscription?.startDate,
+            endDate: user.subscription?.endDate,
+            
+            // Usage & Limits
+            invoicesLimit: limits.invoices, // e.g., 50
+            invoicesUsed: user.usage?.invoiceCount || 0, // Current usage
+            
+            // Feature Flags for UI
+            features: {
+              customTemplates: limits.customTemplates,
+              exportPDF: limits.exportPDF,
+              emailInvoices: limits.emailInvoices,
+              recurringInvoices: limits.recurringInvoices,
+              multiCurrency: limits.multiCurrency,
+              teamMembers: limits.teamMembers,
+              cloudStorage: limits.cloudStorage
+            }
+          }
         },
-        token,
       },
       { status: 200 }
     );
