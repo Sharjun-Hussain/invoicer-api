@@ -8,7 +8,7 @@ export function middleware(request) {
   // 2. Define ALL allowed origins
   const allowedOrigins = [
     "https://invoicer.inzeedo.com", // Production Website
-    "http://localhost:3000",        // Local Development
+    "http://localhost:8080",        // Local Development
     "capacitor://localhost",        // iOS App (Standard Capacitor)
     "ionic://localhost",            // iOS App (Alternative)
     "http://localhost",             // Android App (Standard Capacitor)
