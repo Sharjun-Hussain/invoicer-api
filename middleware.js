@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
 
+
 export function middleware(request) {
-  // 1. Define the specific allowed origin
-  const ALLOWED_ORIGIN = "https://invoicer.inzeedo.com";
-  
-  // Optional: Add localhost for development, otherwise you can't test your own code!
-  // Remove these lines if you want strict production-only locking.
-  const DEV_ORIGINS = ["http://localhost:8080", "http://localhost:5173"]; 
-  
-  // 2. Get the origin from the incoming request
+  // 1. Get the origin from the request
   const origin = request.headers.get("origin");
+
+  // 2. Define ALL allowed origins
+  const allowedOrigins = [
+    "https://invoicer.inzeedo.com", // Production Website
+    "http://localhost:3000",        // Local Development
+    "capacitor://localhost",        // iOS App (Standard Capacitor)
+    "ionic://localhost",            // iOS App (Alternative)
+    "http://localhost",             // Android App (Standard Capacitor)
+    "https://localhost",            // Android App (If configured with https)
+  ];
+
+  // 3. Prepare the response
   const response = NextResponse.next();
 
-  // 3. Logic: Check if the origin matches your allowed domain
-  if (origin && (origin === ALLOWED_ORIGIN || DEV_ORIGINS.includes(origin))) {
+  // 4. Check if the incoming origin is in our allowed list
+  if (origin && allowedOrigins.includes(origin)) {
     
-    // Set the strict origin (Not '*')
+    // Allow the specific origin that called us
     response.headers.set("Access-Control-Allow-Origin", origin);
     
     // Standard CORS headers
@@ -27,7 +33,7 @@ export function middleware(request) {
     );
   }
 
-  // 4. Handle the "Preflight" (OPTIONS) request instantly
+  // 5. Handle "Preflight" (OPTIONS) requests
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { 
       status: 200, 
@@ -38,7 +44,6 @@ export function middleware(request) {
   return response;
 }
 
-// 5. Apply this middleware only to API routes
 export const config = {
   matcher: '/api/:path*',
 };
