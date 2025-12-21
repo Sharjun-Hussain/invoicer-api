@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || 'onboarding@resend.dev';
+const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@inzeedo.com';
 const FROM_NAME = 'Invoicer';
 
 /**
