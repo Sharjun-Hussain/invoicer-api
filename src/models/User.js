@@ -11,17 +11,9 @@ const UserSchema = new Schema(
       unique: true,
       required: [true, "Email is required"],
     },
-    mobile: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
     isEmailVerified: { type: Boolean, default: false },
-    isMobileVerified: { type: Boolean, default: false },
     emailVerificationOTP: String,
     emailVerificationOTPExpire: Date,
-    mobileVerificationOTP: String,
-    mobileVerificationOTPExpire: Date,
     password: {
       type: String,
       required: [true, "Password is required"],

@@ -5,9 +5,9 @@ import User from "../../../models/User";
 
 export async function POST(req) {
     try {
-        const { email, otp, type } = await req.json(); // type: 'email' or 'mobile'
+        const { email, otp } = await req.json();
 
-        if (!email || !otp || !type) {
+        if (!email || !otp) {
             return NextResponse.json(
                 { message: "All fields are required" },
                 { status: 400 }
@@ -26,40 +26,26 @@ export async function POST(req) {
 
         const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
 
-        if (type === 'email') {
-            if (user.emailVerificationOTP !== otpHash) {
-                return NextResponse.json({ message: "Invalid email verification code" }, { status: 400 });
-            }
-            if (user.emailVerificationOTPExpire < Date.now()) {
-                return NextResponse.json({ message: "Email verification code has expired" }, { status: 400 });
-            }
-            user.isEmailVerified = true;
-            user.emailVerificationOTP = undefined;
-            user.emailVerificationOTPExpire = undefined;
-        } else if (type === 'mobile') {
-            if (user.mobileVerificationOTP !== otpHash) {
-                return NextResponse.json({ message: "Invalid mobile verification code" }, { status: 400 });
-            }
-            if (user.mobileVerificationOTPExpire < Date.now()) {
-                return NextResponse.json({ message: "Mobile verification code has expired" }, { status: 400 });
-            }
-            user.isMobileVerified = true;
-            user.mobileVerificationOTP = undefined;
-            user.mobileVerificationOTPExpire = undefined;
-        } else {
-            return NextResponse.json({ message: "Invalid verification type" }, { status: 400 });
+        if (user.emailVerificationOTP !== otpHash) {
+            return NextResponse.json({ message: "Invalid verification code" }, { status: 400 });
         }
+        if (user.emailVerificationOTPExpire < Date.now()) {
+            return NextResponse.json({ message: "Verification code has expired" }, { status: 400 });
+        }
+
+        user.isEmailVerified = true;
+        user.emailVerificationOTP = undefined;
+        user.emailVerificationOTPExpire = undefined;
 
         await user.save();
 
         return NextResponse.json({
             success: true,
-            message: `${type === 'email' ? 'Email' : 'Mobile'} verified successfully`,
+            message: "Email verified successfully",
             user: {
                 id: user._id,
                 email: user.email,
-                isEmailVerified: user.isEmailVerified,
-                isMobileVerified: user.isMobileVerified
+                isEmailVerified: user.isEmailVerified
             }
         });
 

@@ -9,10 +9,10 @@ import { sendAccountVerificationOTP } from "../../../lib/emailService";
 
 export async function POST(req) {
   try {
-    const { name, email, password, mobile } = await req.json();
+    const { name, email, password } = await req.json();
 
     // 1. Validate Input
-    if (!name || !email || !password || !mobile) {
+    if (!name || !email || !password) {
       return NextResponse.json(
         { message: "All fields are required" },
         { status: 400 }
@@ -21,12 +21,11 @@ export async function POST(req) {
 
     await connectToDatabase();
 
-    // 2. Check if user or mobile already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { mobile }] });
+    // 2. Check if user already exists
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      const field = existingUser.email === email ? 'Email' : 'Mobile number';
       return NextResponse.json(
-        { message: `${field} already exists` },
+        { message: "Email already exists" },
         { status: 409 }
       );
     }
@@ -34,30 +33,22 @@ export async function POST(req) {
     // 3. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Generate OTPs
+    // 4. Generate Email OTP
     const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const mobileOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
     const emailOtpHash = crypto.createHash("sha256").update(emailOtp).digest("hex");
-    const mobileOtpHash = crypto.createHash("sha256").update(mobileOtp).digest("hex");
 
     // 5. Create User
     const user = await User.create({
       name,
       email,
-      mobile,
       password: hashedPassword,
       isEmailVerified: false,
-      isMobileVerified: false,
       emailVerificationOTP: emailOtpHash,
       emailVerificationOTPExpire: Date.now() + 3600000, // 1 hour
-      mobileVerificationOTP: mobileOtpHash,
-      mobileVerificationOTPExpire: Date.now() + 3600000, // 1 hour
     });
 
-    // 6. Send OTPs
+    // 6. Send Email OTP
     await sendAccountVerificationOTP(email, emailOtp);
-    console.log(`[MOCK SMS] Sending OTP ${mobileOtp} to ${mobile}`);
 
     // 7. Fetch Default Plan Details ('basic')
     const planDetails = await Plan.findOne({ id: 'basic' });
@@ -88,9 +79,7 @@ export async function POST(req) {
           id: user._id,
           name: user.name,
           email: user.email,
-          mobile: user.mobile,
           isEmailVerified: user.isEmailVerified,
-          isMobileVerified: user.isMobileVerified,
 
           subscription: {
             plan: 'basic',

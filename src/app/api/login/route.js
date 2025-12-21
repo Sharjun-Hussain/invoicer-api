@@ -70,9 +70,7 @@ export async function POST(req) {
           id: user._id,
           name: user.name,
           email: user.email,
-          mobile: user.mobile,
           isEmailVerified: user.isEmailVerified,
-          isMobileVerified: user.isMobileVerified,
 
           // Full Subscription Object
           subscription: {

@@ -44,9 +44,7 @@ export async function GET(req) {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                mobile: user.mobile,
                 isEmailVerified: user.isEmailVerified,
-                isMobileVerified: user.isMobileVerified,
                 subscription: {
                     plan: planId,
                     status: user.subscription?.status || 'active',
