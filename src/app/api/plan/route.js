@@ -17,10 +17,19 @@ export async function GET(req) {
 
     const userId = decoded.id;
     const user = await User.findById(userId);
-    const plan = await Plan.findOne({ id: user.subscription.planId });
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
+
+    const plan = user.subscription?.planId ? await Plan.findOne({ id: user.subscription.planId }) : null;
 
     const now = new Date();
-    const lastReset = new Date(user.usage.lastResetDate);
+
+    // Ensure usage object exists and lastResetDate is valid
+    user.usage = user.usage || { invoiceCount: 0, lastResetDate: now };
+    let lastReset = user.usage.lastResetDate ? new Date(user.usage.lastResetDate) : now;
+    if (isNaN(lastReset.getTime())) lastReset = now;
 
     if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
       user.usage.invoiceCount = 0;
@@ -34,14 +43,14 @@ export async function GET(req) {
     return NextResponse.json({
       success: true,
       subscription: {
-        plan: user.subscription.planId,
-        status: user.subscription.status,
-        invoicesLimit: plan.limits.invoices, 
-        invoicesUsed: user.usage.invoiceCount,
+        plan: user.subscription?.planId ?? null,
+        status: user.subscription?.status ?? null,
+        invoicesLimit: plan?.limits?.invoices ?? 0,
+        invoicesUsed: user.usage?.invoiceCount ?? 0,
         features: {
-          customTemplates: plan.limits.customTemplates,
-          exportPDF: plan.limits.exportPDF,
-          teamMembers: plan.limits.teamMembers,
+          customTemplates: plan?.limits?.customTemplates ?? false,
+          exportPDF: plan?.limits?.exportPDF ?? false,
+          teamMembers: plan?.limits?.teamMembers ?? 0,
           // Add other flags...
         }
       },
