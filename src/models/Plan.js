@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, model, models } from 'mongoose';
 
 const PlanSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
@@ -21,4 +21,7 @@ const PlanSchema = new mongoose.Schema({
   marketingFeatures: [String]
 });
 
-export default mongoose.models.Plan || mongoose.model('Plan', PlanSchema);
+// Prevent overwriting the model if it already exists (Next.js hot reload fix)
+const Plan = models.Plan || model('Plan', PlanSchema);
+
+export default Plan;
