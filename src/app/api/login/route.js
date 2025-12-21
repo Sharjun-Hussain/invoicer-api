@@ -46,11 +46,11 @@ export async function POST(req) {
     const planDetails = await Plan.findOne({ id: planId });
 
     // Fallback if plan database is empty (optional safety)
-    const limits = planDetails?.limits || { 
-      invoices: 50, 
-      teamMembers: 1, 
-      exportPDF: true, 
-      customTemplates: false 
+    const limits = planDetails?.limits || {
+      invoices: 50,
+      teamMembers: 1,
+      exportPDF: true,
+      customTemplates: false
     };
 
     // 5. Generate JWT Token
@@ -70,18 +70,21 @@ export async function POST(req) {
           id: user._id,
           name: user.name,
           email: user.email,
-          
+          mobile: user.mobile,
+          isEmailVerified: user.isEmailVerified,
+          isMobileVerified: user.isMobileVerified,
+
           // Full Subscription Object
           subscription: {
             plan: planId,
             status: user.subscription?.status || 'active',
             startDate: user.subscription?.startDate,
             endDate: user.subscription?.endDate,
-            
+
             // Usage & Limits
             invoicesLimit: limits.invoices, // e.g., 50
             invoicesUsed: user.usage?.invoiceCount || 0, // Current usage
-            
+
             // Feature Flags for UI
             features: {
               customTemplates: limits.customTemplates,

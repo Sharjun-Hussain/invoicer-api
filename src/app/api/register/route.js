@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import connectToDatabase from "../../../lib/db";
 import User from "../../../models/User";
-import Plan from "../../../models/Plan"; // Import Plan model
+import Plan from "../../../models/Plan";
+import { sendAccountVerificationOTP } from "../../../lib/emailService";
 
 export async function POST(req) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, mobile } = await req.json();
 
     // 1. Validate Input
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !mobile) {
       return NextResponse.json(
         { message: "All fields are required" },
         { status: 400 }
@@ -19,11 +21,12 @@ export async function POST(req) {
 
     await connectToDatabase();
 
-    // 2. Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // 2. Check if user or mobile already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { mobile }] });
     if (existingUser) {
+      const field = existingUser.email === email ? 'Email' : 'Mobile number';
       return NextResponse.json(
-        { message: "User already exists" },
+        { message: `${field} already exists` },
         { status: 409 }
       );
     }
@@ -31,56 +34,74 @@ export async function POST(req) {
     // 3. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Create User
-    // Note: The User Schema defaults (planId: 'basic', invoiceCount: 0) 
-    // will automatically handle the subscription fields.
+    // 4. Generate OTPs
+    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const mobileOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const emailOtpHash = crypto.createHash("sha256").update(emailOtp).digest("hex");
+    const mobileOtpHash = crypto.createHash("sha256").update(mobileOtp).digest("hex");
+
+    // 5. Create User
     const user = await User.create({
       name,
       email,
+      mobile,
       password: hashedPassword,
+      isEmailVerified: false,
+      isMobileVerified: false,
+      emailVerificationOTP: emailOtpHash,
+      emailVerificationOTPExpire: Date.now() + 3600000, // 1 hour
+      mobileVerificationOTP: mobileOtpHash,
+      mobileVerificationOTPExpire: Date.now() + 3600000, // 1 hour
     });
 
-    // 5. Fetch Default Plan Details ('basic')
-    // We need this to send the limits back to the frontend immediately
+    // 6. Send OTPs
+    await sendAccountVerificationOTP(email, emailOtp);
+    console.log(`[MOCK SMS] Sending OTP ${mobileOtp} to ${mobile}`);
+
+    // 7. Fetch Default Plan Details ('basic')
     const planDetails = await Plan.findOne({ id: 'basic' });
-    
-    // Fallback defaults in case 'basic' plan is not in DB yet
-    const limits = planDetails?.limits || { 
-      invoices: 50, 
-      teamMembers: 1, 
-      exportPDF: true, 
-      customTemplates: false 
+
+    const limits = planDetails?.limits || {
+      invoices: 50,
+      clients: 20,
+      items: 50,
+      teamMembers: 1,
+      exportPDF: true,
+      customTemplates: false
     };
 
-    // 6. Generate JWT Token
+    // 8. Generate JWT Token
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    // 7. Return Response with Full Subscription Data
+    // 9. Return Response
     return NextResponse.json(
       {
         success: true,
-        message: "User registered successfully",
+        message: "User registered. Please verify your email and mobile.",
         token,
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
-          
-          // Populate the subscription object immediately
+          mobile: user.mobile,
+          isEmailVerified: user.isEmailVerified,
+          isMobileVerified: user.isMobileVerified,
+
           subscription: {
             plan: 'basic',
             status: 'active',
             startDate: user.createdAt,
-            
-            // Usage starts at 0
-            invoicesLimit: limits.invoices, 
-            invoicesUsed: 0, 
-
-            // Features for the UI
+            invoicesLimit: limits.invoices,
+            invoicesUsed: 0,
+            clientsLimit: limits.clients,
+            clientsUsed: 0,
+            itemsLimit: limits.items,
+            itemsUsed: 0,
             features: {
               customTemplates: limits.customTemplates,
               exportPDF: limits.exportPDF,

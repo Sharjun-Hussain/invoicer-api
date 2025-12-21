@@ -1,14 +1,16 @@
 import mongoose from 'mongoose';
 
 const PlanSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true }, 
+  id: { type: String, required: true, unique: true },
   name: String,
   price: Number,
   currency: { type: String, default: 'LKR' },
-  
+
   // Technical Limits
   limits: {
     invoices: { type: Number, default: 50 }, // -1 = Unlimited
+    clients: { type: Number, default: 20 },
+    items: { type: Number, default: 50 },
     teamMembers: Number,
     exportPDF: Boolean,
     customTemplates: Boolean,
@@ -16,7 +18,7 @@ const PlanSchema = new mongoose.Schema({
   },
 
   // For UI Display
-  marketingFeatures: [String] 
+  marketingFeatures: [String]
 });
 
 export default mongoose.models.Plan || mongoose.model('Plan', PlanSchema);

@@ -57,6 +57,12 @@ export async function POST(req) {
       // Save OTP (expires in 10 minutes)
       user.resetPasswordOTP = otpHash;
       user.resetPasswordOTPExpire = Date.now() + 600000; // 10 minutes
+
+      // Reset OTP verification attempts and locks for new OTP
+      user.otpVerificationAttempts = 0;
+      user.otpVerificationLocked = false;
+      user.otpVerificationLockedUntil = undefined;
+
       await user.save();
 
       // Send OTP email

@@ -11,10 +11,26 @@ const UserSchema = new Schema(
       unique: true,
       required: [true, "Email is required"],
     },
+    mobile: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    isEmailVerified: { type: Boolean, default: false },
+    isMobileVerified: { type: Boolean, default: false },
+    emailVerificationOTP: String,
+    emailVerificationOTPExpire: Date,
+    mobileVerificationOTP: String,
+    mobileVerificationOTPExpire: Date,
     password: {
       type: String,
       required: [true, "Password is required"],
       select: false, // Don't return password by default
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
@@ -22,6 +38,9 @@ const UserSchema = new Schema(
     resetPasswordOTPExpire: Date,
     resetPasswordAttempts: { type: Number, default: 0 },
     resetPasswordLastAttempt: Date,
+    otpVerificationAttempts: { type: Number, default: 0 },
+    otpVerificationLocked: { type: Boolean, default: false },
+    otpVerificationLockedUntil: Date,
     subscription: {
       planId: { type: String, default: 'basic' }, // References Plan.id
       status: { type: String, default: 'active' },
@@ -30,6 +49,8 @@ const UserSchema = new Schema(
     },
     usage: {
       invoiceCount: { type: Number, default: 0 },
+      clientCount: { type: Number, default: 0 },
+      itemCount: { type: Number, default: 0 },
       lastResetDate: { type: Date, default: Date.now } // To know when to reset to 0
     }
   },

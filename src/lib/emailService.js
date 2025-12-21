@@ -7,12 +7,12 @@ const FROM_EMAIL = process.env.MAIL_USER || 'noreply@invoicer.com';
  * Send password reset email with link (for web platform)
  */
 export async function sendPasswordResetEmail(email, resetLink) {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to: email,
-            subject: 'Reset Your Password',
-            html: `
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Reset Your Password',
+      html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -57,31 +57,31 @@ export async function sendPasswordResetEmail(email, resetLink) {
           </body>
         </html>
       `,
-        });
+    });
 
-        if (error) {
-            console.error('Resend Error:', error);
-            return { success: false, error };
-        }
-
-        console.log('✅ Password reset email sent:', data);
-        return { success: true, data };
-    } catch (error) {
-        console.error('Email Service Error:', error);
-        return { success: false, error };
+    if (error) {
+      console.error('Resend Error:', error);
+      return { success: false, error };
     }
+
+    console.log('✅ Password reset email sent:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Email Service Error:', error);
+    return { success: false, error };
+  }
 }
 
 /**
  * Send password reset OTP (for mobile platform)
  */
 export async function sendPasswordResetOTP(email, otp) {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to: email,
-            subject: 'Your Password Reset Code',
-            html: `
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Your Password Reset Code',
+      html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -124,17 +124,76 @@ export async function sendPasswordResetOTP(email, otp) {
           </body>
         </html>
       `,
-        });
+    });
 
-        if (error) {
-            console.error('Resend Error:', error);
-            return { success: false, error };
-        }
-
-        console.log('✅ Password reset OTP sent:', data);
-        return { success: true, data };
-    } catch (error) {
-        console.error('Email Service Error:', error);
-        return { success: false, error };
+    if (error) {
+      console.error('Resend Error:', error);
+      return { success: false, error };
     }
+
+    console.log('✅ Password reset OTP sent:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Email Service Error:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Send account verification OTP
+ */
+export async function sendAccountVerificationOTP(email, otp) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Verify Your Invoicer Account',
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+              .otp-box { background: white; border: 2px dashed #667eea; padding: 20px; text-align: center; margin: 20px 0; border-radius: 10px; }
+              .otp-code { font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #667eea; font-family: 'Courier New', monospace; }
+              .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>👋 Welcome to Invoicer!</h1>
+              </div>
+              <div class="content">
+                <p>Hello,</p>
+                <p>Thank you for signing up! To complete your registration and secure your account, please use the following verification code:</p>
+                <div class="otp-box">
+                  <div class="otp-code">${otp}</div>
+                </div>
+                <p style="text-align: center; color: #666;">Enter this code in the app to verify your email address.</p>
+                <p>If you didn't create an account with us, you can safely ignore this email.</p>
+              </div>
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Invoicer. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error('Resend Error:', error);
+      return { success: false, error };
+    }
+
+    console.log('✅ Account verification OTP sent:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Email Service Error:', error);
+    return { success: false, error };
+  }
 }
