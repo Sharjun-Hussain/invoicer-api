@@ -197,7 +197,7 @@ Sets a new password using the reset token.
 ## 4. Subscription & Plans
 
 ### GET `/plan`
-Returns current usage and all available plans.
+Returns current usage and all available plans with detailed limits.
 
 **Headers:**
 - `Authorization: Bearer <token>` (**Mandatory**)
@@ -207,13 +207,31 @@ Returns current usage and all available plans.
 {
   "success": true,
   "subscription": {
-    "plan": "basic",
-    "invoicesLimit": 50,
-    "invoicesUsed": 10
+    "planId": "basic",
+    "status": "active",
+    "usage": {
+      "invoices": 10,
+      "clients": 5,
+      "items": 12
+    },
+    "limits": {
+      "invoices": 50,
+      "clients": 20,
+      "items": 50,
+      "teamMembers": 1,
+      "exportPDF": true,
+      "customTemplates": false
+    }
   },
   "availablePlans": [
-    { "id": "basic", "name": "Basic", "price": 0 },
-    { "id": "pro", "name": "Pro", "price": 9.99 }
+    { 
+      "id": "basic", 
+      "name": "Basic", 
+      "price": 0,
+      "limits": { ... },
+      "marketingFeatures": [ ... ]
+    },
+    { "id": "pro", "name": "Pro", "price": 999, ... }
   ]
 }
 ```
@@ -232,8 +250,11 @@ Call this endpoint **before** generating a PDF to check limits and increment usa
 ```json
 {
   "success": true,
-  "invoicesUsed": 11,
-  "remaining": 39
+  "usage": {
+    "invoices": 11,
+    "clients": 5,
+    "items": 12
+  }
 }
 ```
 
@@ -272,11 +293,90 @@ Admin-only login. Returns a token with `role: 'admin'`.
 
 ---
 
-### GET `/admin/users`
-Lists all users with their plan and verification status.
+### GET `/admin/stats`
+Returns real-time platform statistics for the dashboard.
 
 **Headers:**
 - `Authorization: Bearer <admin_token>` (**Mandatory**)
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "stats": {
+    "totalUsers": 150,
+    "activeSubscriptions": 45,
+    "totalInvoices": 1250,
+    "totalRevenue": 45000,
+    "planBreakdown": [
+      { "name": "Basic", "count": 105, "color": "#94a3b8" },
+      { "name": "Pro", "count": 30, "color": "#6366f1" },
+      { "name": "Premium", "count": 15, "color": "#8b5cf6" }
+    ],
+    "growthTrend": [
+      { "name": "Jul", "users": 120 },
+      { "name": "Aug", "users": 135 },
+      ...
+    ]
+  }
+}
+```
+
+---
+
+### GET `/admin/users`
+Lists all users with enriched metrics (revenue, months paying, usage).
+
+**Headers:**
+- `Authorization: Bearer <admin_token>` (**Mandatory**)
+
+**Example Response:**
+```json
+[
+  {
+    "_id": "6584...",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "subscription": { "planId": "pro", ... },
+    "totalInvoices": 45,
+    "monthsPaying": 6,
+    "revenueGenerated": 5994,
+    "createdAt": "2023-06-15T..."
+  }
+]
+```
+
+---
+
+### GET `/admin/plans`
+Lists all subscription plans with their full configuration.
+
+**Headers:**
+- `Authorization: Bearer <admin_token>` (**Mandatory**)
+
+---
+
+### PUT `/admin/plans/:id`
+Updates a specific plan's details and limits.
+
+**Headers:**
+- `Authorization: Bearer <admin_token>` (**Mandatory**)
+
+**Payload:**
+```json
+{
+  "name": "Pro Plus",
+  "price": 1299,
+  "limits": {
+    "invoices": -1,
+    "clients": 200,
+    "items": 1000,
+    "teamMembers": 5,
+    "exportPDF": true,
+    "customTemplates": true
+  }
+}
+```
 
 ---
 

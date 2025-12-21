@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 export default function PlansPage() {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [editingPlan, setEditingPlan] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         fetchPlans();
@@ -22,6 +25,40 @@ export default function PlansPage() {
             console.error("Failed to fetch plans", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleEdit = (plan) => {
+        setEditingPlan({ ...plan });
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        const token = localStorage.getItem('adminToken');
+        try {
+            const res = await fetch(`/api/admin/plans/${editingPlan.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(editingPlan)
+            });
+
+            if (res.ok) {
+                await fetchPlans();
+                setIsModalOpen(false);
+                setEditingPlan(null);
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to update plan");
+            }
+        } catch (error) {
+            console.error("Error updating plan:", error);
+            alert("An error occurred while updating the plan");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -66,7 +103,10 @@ export default function PlansPage() {
                                 </div>
                             </div>
 
-                            <button className="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-lg transition-colors text-sm">
+                            <button
+                                onClick={() => handleEdit(plan)}
+                                className="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-lg transition-colors text-sm"
+                            >
                                 Edit Plan Details
                             </button>
                         </div>
@@ -79,6 +119,132 @@ export default function PlansPage() {
                     </div>
                 )}
             </div>
+
+            {/* Edit Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-slate-100">
+                            <h2 className="text-xl font-bold text-slate-900">Edit Plan: {editingPlan.name}</h2>
+                        </div>
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Plan Name</label>
+                                <input
+                                    type="text"
+                                    value={editingPlan.name}
+                                    onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Price (LKR)</label>
+                                <input
+                                    type="number"
+                                    value={editingPlan.price}
+                                    onChange={(e) => setEditingPlan({ ...editingPlan, price: Number(e.target.value) })}
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Invoices Limit</label>
+                                    <input
+                                        type="number"
+                                        value={editingPlan.limits.invoices}
+                                        onChange={(e) => setEditingPlan({
+                                            ...editingPlan,
+                                            limits: { ...editingPlan.limits, invoices: Number(e.target.value) }
+                                        })}
+                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">-1 for unlimited</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Clients Limit</label>
+                                    <input
+                                        type="number"
+                                        value={editingPlan.limits.clients}
+                                        onChange={(e) => setEditingPlan({
+                                            ...editingPlan,
+                                            limits: { ...editingPlan.limits, clients: Number(e.target.value) }
+                                        })}
+                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Items Limit</label>
+                                    <input
+                                        type="number"
+                                        value={editingPlan.limits.items}
+                                        onChange={(e) => setEditingPlan({
+                                            ...editingPlan,
+                                            limits: { ...editingPlan.limits, items: Number(e.target.value) }
+                                        })}
+                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Team Members</label>
+                                    <input
+                                        type="number"
+                                        value={editingPlan.limits.teamMembers}
+                                        onChange={(e) => setEditingPlan({
+                                            ...editingPlan,
+                                            limits: { ...editingPlan.limits, teamMembers: Number(e.target.value) }
+                                        })}
+                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-4 pt-2">
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={editingPlan.limits.exportPDF}
+                                        onChange={(e) => setEditingPlan({
+                                            ...editingPlan,
+                                            limits: { ...editingPlan.limits, exportPDF: e.target.checked }
+                                        })}
+                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-slate-700">Export PDF</span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={editingPlan.limits.customTemplates}
+                                        onChange={(e) => setEditingPlan({
+                                            ...editingPlan,
+                                            limits: { ...editingPlan.limits, customTemplates: e.target.checked }
+                                        })}
+                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-slate-700">Custom Templates</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-slate-50 flex justify-end space-x-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 text-slate-600 font-medium hover:text-slate-800 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+                            >
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

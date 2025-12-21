@@ -44,7 +44,9 @@ export default function UsersPage() {
                                 <th className="px-6 py-4">Name</th>
                                 <th className="px-6 py-4">Email</th>
                                 <th className="px-6 py-4">Plan</th>
-                                <th className="px-6 py-4">Role</th>
+                                <th className="px-6 py-4 text-center">Invoices</th>
+                                <th className="px-6 py-4 text-center">Months</th>
+                                <th className="px-6 py-4 text-right">Revenue</th>
                                 <th className="px-6 py-4">Joined</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -52,24 +54,25 @@ export default function UsersPage() {
                         <tbody className="divide-y divide-slate-100">
                             {users.map(user => (
                                 <tr key={user._id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-slate-900">{user.name}</td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-slate-900">{user.name}</div>
+                                        <div className="text-[10px] text-slate-400 font-mono">{user._id}</div>
+                                    </td>
                                     <td className="px-6 py-4">{user.email}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${(user.subscription?.planId === 'pro' || user.subscription?.planId === 'premium')
-                                                ? 'bg-indigo-100 text-indigo-700'
-                                                : 'bg-slate-100 text-slate-600'
+                                            ? 'bg-indigo-100 text-indigo-700'
+                                            : 'bg-slate-100 text-slate-600'
                                             }`}>
                                             {user.subscription?.planId || 'Basic'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 capitalize">
-                                        {user.role === 'admin' ? (
-                                            <span className="text-purple-600 font-bold flex items-center gap-1">
-                                                <span>🛡️</span> Admin
-                                            </span>
-                                        ) : 'User'}
+                                    <td className="px-6 py-4 text-center font-medium">{user.totalInvoices || 0}</td>
+                                    <td className="px-6 py-4 text-center font-medium">{user.monthsPaying || 1}</td>
+                                    <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                                        LKR {(user.revenueGenerated || 0).toLocaleString()}
                                     </td>
-                                    <td className="px-6 py-4">{new Date(user.createdAt).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 text-right">
                                         <button className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline">Edit</button>
                                     </td>

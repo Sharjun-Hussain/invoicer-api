@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "../../../../lib/db";
 import User from "../../../../models/User";
+import Plan from "../../../../models/Plan";
 import jwt from "jsonwebtoken";
 
 const checkAdmin = (req) => {
@@ -23,8 +24,30 @@ export async function GET(req) {
     try {
         await connectToDatabase();
         const users = await User.find().select('-password').sort({ createdAt: -1 });
-        return NextResponse.json(users);
+        const plans = await Plan.find();
+        const planMap = plans.reduce((acc, plan) => {
+            acc[plan.id] = plan.price;
+            return acc;
+        }, {});
+
+        const enrichedUsers = users.map(user => {
+            const planPrice = planMap[user.subscription?.planId] || 0;
+            const startDate = new Date(user.subscription?.startDate || user.createdAt);
+            const now = new Date();
+            const monthsPaying = Math.max(1, (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth()));
+            const revenueGenerated = planPrice * monthsPaying;
+
+            return {
+                ...user.toObject(),
+                revenueGenerated,
+                monthsPaying,
+                totalInvoices: user.usage?.invoiceCount || 0
+            };
+        });
+
+        return NextResponse.json(enrichedUsers);
     } catch (error) {
+        console.error("Error fetching users:", error);
         return NextResponse.json({ message: "Error fetching users" }, { status: 500 });
     }
 }
