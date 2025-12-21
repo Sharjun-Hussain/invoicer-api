@@ -1,15 +1,26 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.MAIL_USER || 'noreply@invoicer.com';
+// SMTP Configuration
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || 'onboarding@resend.dev';
+const FROM_NAME = 'Invoicer';
 
 /**
  * Send password reset email with link (for web platform)
  */
 export async function sendPasswordResetEmail(email, resetLink) {
   try {
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+    const info = await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: email,
       subject: 'Reset Your Password',
       html: `
@@ -59,15 +70,10 @@ export async function sendPasswordResetEmail(email, resetLink) {
       `,
     });
 
-    if (error) {
-      console.error('Resend Error:', error);
-      return { success: false, error };
-    }
-
-    console.log('✅ Password reset email sent:', data);
-    return { success: true, data };
+    console.log('✅ Password reset email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email Service Error:', error);
+    console.error('SMTP Error:', error);
     return { success: false, error };
   }
 }
@@ -77,8 +83,8 @@ export async function sendPasswordResetEmail(email, resetLink) {
  */
 export async function sendPasswordResetOTP(email, otp) {
   try {
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+    const info = await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: email,
       subject: 'Your Password Reset Code',
       html: `
@@ -126,15 +132,10 @@ export async function sendPasswordResetOTP(email, otp) {
       `,
     });
 
-    if (error) {
-      console.error('Resend Error:', error);
-      return { success: false, error };
-    }
-
-    console.log('✅ Password reset OTP sent:', data);
-    return { success: true, data };
+    console.log('✅ Password reset OTP sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email Service Error:', error);
+    console.error('SMTP Error:', error);
     return { success: false, error };
   }
 }
@@ -144,8 +145,8 @@ export async function sendPasswordResetOTP(email, otp) {
  */
 export async function sendAccountVerificationOTP(email, otp) {
   try {
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+    const info = await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: email,
       subject: 'Verify Your Invoicer Account',
       html: `
@@ -185,15 +186,19 @@ export async function sendAccountVerificationOTP(email, otp) {
       `,
     });
 
-    if (error) {
-      console.error('Resend Error:', error);
-      return { success: false, error };
-    }
-
-    console.log('✅ Account verification OTP sent:', data);
-    return { success: true, data };
+    console.log('✅ Account verification OTP sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email Service Error:', error);
+    console.error('SMTP Error:', error);
     return { success: false, error };
   }
 }
+
+// Verify SMTP connection on startup
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error('❌ SMTP connection failed:', error);
+  } else {
+    console.log('✅ SMTP server is ready to send emails');
+  }
+});
