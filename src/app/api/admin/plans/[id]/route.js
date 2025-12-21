@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "../../../../lib/db";
-import Plan from "../../../../models/Plan";
 import jwt from "jsonwebtoken";
+import Plan from "../../../../../models/Plan";
 
 const checkAdmin = (req) => {
     const authHeader = req.headers.get('authorization');
