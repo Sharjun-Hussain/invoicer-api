@@ -5,12 +5,15 @@ import Plan from '../../../models/Plan';
 import User from '../../../models/User';
 
 export async function GET(req) {
-  await dbConnect();
+  await connectToDatabase();
 
   try {
-    const token = req.headers.get('authorization')?.split(' ')[1];
-    const decoded = verifyJwt(token); 
-    if (!decoded) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const decoded = verifyJwt(token);
+    if (!decoded) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
 
     const userId = decoded.id;
     const user = await User.findById(userId);
