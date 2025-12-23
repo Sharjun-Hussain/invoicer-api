@@ -19,6 +19,9 @@ const FROM_NAME = 'Invoicer';
  */
 export async function sendPasswordResetEmail(email, resetLink) {
   try {
+    console.log('📧 Attempting to send password reset email to:', email);
+    console.log('🔗 Reset link:', resetLink);
+
     const info = await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: email,
@@ -70,10 +73,20 @@ export async function sendPasswordResetEmail(email, resetLink) {
       `,
     });
 
-    console.log('✅ Password reset email sent:', info.messageId);
+    console.log('✅ Password reset email sent successfully!');
+    console.log('📨 Message ID:', info.messageId);
+    console.log('📬 Accepted recipients:', info.accepted);
+    console.log('❌ Rejected recipients:', info.rejected);
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('SMTP Error:', error);
+    console.error('❌ SMTP Error sending password reset email:', error);
+    console.error('Error details:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
+    });
     return { success: false, error };
   }
 }
