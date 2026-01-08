@@ -44,7 +44,10 @@ export async function GET(req) {
                 id: user._id,
                 name: user.name,
                 email: user.email,
+                name: user.name,
+                email: user.email,
                 isEmailVerified: user.isEmailVerified,
+                settings: user.settings,
                 subscription: {
                     plan: planId,
                     status: user.subscription?.status || 'active',
@@ -72,6 +75,54 @@ export async function GET(req) {
         });
     } catch (error) {
         console.error("Me API Error:", error);
+        return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    }
+}
+
+export async function PUT(req) {
+    try {
+        const authHeader = req.headers.get("authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
+
+        const token = authHeader.split(" ")[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { settings } = body;
+
+        await connectToDatabase();
+
+        const updateData = {};
+        if (settings) updateData.settings = settings;
+
+        const user = await User.findByIdAndUpdate(
+            decoded.userId,
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!user) {
+            return NextResponse.json({ message: "User not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Settings updated successfully",
+            user: {
+                id: user._id,
+                settings: user.settings
+            }
+        });
+
+    } catch (error) {
+        console.error("Update Me API Error:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
     }
 }

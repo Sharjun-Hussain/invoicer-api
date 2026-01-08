@@ -44,6 +44,9 @@ const UserSchema = new Schema(
       clientCount: { type: Number, default: 0 },
       itemCount: { type: Number, default: 0 },
       lastResetDate: { type: Date, default: Date.now } // To know when to reset to 0
+    },
+    settings: {
+      sessionTimeout: { type: String, default: '2hours' },
     }
   },
   { timestamps: true }
