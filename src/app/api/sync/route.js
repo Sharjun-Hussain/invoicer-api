@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
-import { updateSheetData, findSpreadsheet, getSheetData } from '@/lib/googleSheets';
+import { updateSheetData, findOrCreateSpreadsheet, getSheetData } from '@/lib/googleSheets';
 
 export async function POST(req) {
     try {
@@ -30,10 +30,10 @@ export async function POST(req) {
             return NextResponse.json({ success: false, message: 'Cloud sync not enabled' }, { status: 400 });
         }
 
-        // Get spreadsheet ID
+        // Get spreadsheet ID (create if doesn't exist)
         let spreadsheetId = user.googleSpreadsheetId;
         if (!spreadsheetId) {
-            spreadsheetId = await findSpreadsheet(user.googleAccessToken);
+            spreadsheetId = await findOrCreateSpreadsheet(user.googleAccessToken);
             if (spreadsheetId) {
                 user.googleSpreadsheetId = spreadsheetId;
                 await user.save();

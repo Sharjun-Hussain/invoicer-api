@@ -5,7 +5,7 @@ import Invoice from '@/models/Invoice';
 import Client from '@/models/Client';
 import Item from '@/models/Item';
 import { verifyJwt } from '@/lib/auth';
-import { findSpreadsheet, getSheetData } from '@/lib/googleSheets';
+import { findOrCreateSpreadsheet, getSheetData } from '@/lib/googleSheets';
 
 export async function POST(req) {
     try {
@@ -32,8 +32,8 @@ export async function POST(req) {
             }
         );
 
-        // Fetch from Google Sheets
-        const spreadsheetId = await findSpreadsheet(accessToken);
+        // Fetch from Google Sheets (create sheet if doesn't exist)
+        const spreadsheetId = await findOrCreateSpreadsheet(accessToken);
         let data = { invoices: [], clients: [], items: [] };
 
         if (spreadsheetId) {

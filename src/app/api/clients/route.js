@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
-import { getSheetData, findSpreadsheet } from '@/lib/googleSheets';
+import { getSheetData, findOrCreateSpreadsheet } from '@/lib/googleSheets';
 
 export async function GET(req) {
     try {
@@ -23,10 +23,10 @@ export async function GET(req) {
             return NextResponse.json({ success: true, clients: [] });
         }
 
-        // Get spreadsheet ID
+        // Get spreadsheet ID (create if doesn't exist)
         let spreadsheetId = user.googleSpreadsheetId;
         if (!spreadsheetId) {
-            spreadsheetId = await findSpreadsheet(user.googleAccessToken);
+            spreadsheetId = await findOrCreateSpreadsheet(user.googleAccessToken);
             if (spreadsheetId) {
                 user.googleSpreadsheetId = spreadsheetId;
                 await user.save();
