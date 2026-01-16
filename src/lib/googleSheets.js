@@ -28,6 +28,49 @@ export async function findSpreadsheet(accessToken) {
     }
 }
 
+export async function createSpreadsheet(accessToken) {
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+    const body = {
+        properties: {
+            title: 'Invoicer_Data'
+        },
+        sheets: [
+            { properties: { title: 'Invoices' } },
+            { properties: { title: 'Clients' } },
+            { properties: { title: 'Items' } }
+        ]
+    };
+
+    try {
+        const res = await fetchWithAuth(url, accessToken, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        console.log('Created new spreadsheet:', data.spreadsheetId);
+        return data.spreadsheetId;
+    } catch (error) {
+        console.error('Error creating spreadsheet:', error);
+        throw error;
+    }
+}
+
+export async function findOrCreateSpreadsheet(accessToken) {
+    // Try to find existing spreadsheet
+    let spreadsheetId = await findSpreadsheet(accessToken);
+
+    // If not found, create a new one
+    if (!spreadsheetId) {
+        console.log('No existing spreadsheet found, creating new one...');
+        spreadsheetId = await createSpreadsheet(accessToken);
+    }
+
+    return spreadsheetId;
+}
+
+
 export async function getSheetData(accessToken, spreadsheetId) {
     const ranges = ['Invoices!A2:Z10000', 'Clients!A2:Z10000', 'Items!A2:Z10000'];
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${ranges.join('&ranges=')}`;

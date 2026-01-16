@@ -53,6 +53,7 @@ const UserSchema = new Schema(
     googleAccessToken: { type: String, select: false },
     googleRefreshToken: { type: String, select: false },
     googleEmail: { type: String },
+    googleSpreadsheetId: { type: String }, // Store the sheet ID to reuse
     companySettings: { type: Object, default: {} },
     invoiceSettings: { type: Object, default: {} },
   },
