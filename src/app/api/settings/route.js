@@ -22,7 +22,9 @@ export async function GET(req) {
                 company: user.companySettings || {},
                 invoice: user.invoiceSettings || {},
                 sessionTimeout: user.settings?.sessionTimeout,
-                cloudSyncEnabled: user.settings?.cloudSyncEnabled || false
+                cloudSyncEnabled: user.settings?.cloudSyncEnabled || false,
+                isGoogleConnected: !!user.googleAccessToken,
+                googleEmail: user.googleEmail
             }
         });
     } catch (error) {
