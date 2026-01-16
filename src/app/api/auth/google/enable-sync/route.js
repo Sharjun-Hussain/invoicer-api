@@ -27,7 +27,8 @@ export async function POST(req) {
             {
                 googleAccessToken: accessToken,
                 googleRefreshToken: refreshToken,
-                googleEmail: email
+                googleEmail: email,
+                'settings.cloudSyncEnabled': true
             }
         );
 

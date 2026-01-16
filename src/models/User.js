@@ -47,6 +47,7 @@ const UserSchema = new Schema(
     },
     settings: {
       sessionTimeout: { type: String, default: '2hours' },
+      cloudSyncEnabled: { type: Boolean, default: false },
     },
     // Cloud Sync & Settings
     googleAccessToken: { type: String, select: false },
