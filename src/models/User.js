@@ -47,7 +47,13 @@ const UserSchema = new Schema(
     },
     settings: {
       sessionTimeout: { type: String, default: '2hours' },
-    }
+    },
+    // Cloud Sync & Settings
+    googleAccessToken: { type: String, select: false },
+    googleRefreshToken: { type: String, select: false },
+    googleEmail: { type: String },
+    companySettings: { type: Object, default: {} },
+    invoiceSettings: { type: Object, default: {} },
   },
   { timestamps: true }
 );
