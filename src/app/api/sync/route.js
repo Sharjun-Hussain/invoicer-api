@@ -3,7 +3,9 @@ import connectToDatabase from '@/lib/db';
 import Invoice from '@/models/Invoice';
 import Client from '@/models/Client';
 import Item from '@/models/Item';
+import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
+import { updateSheetData, findSpreadsheet } from '@/lib/googleSheets';
 
 export async function POST(req) {
     try {
@@ -62,6 +64,34 @@ export async function POST(req) {
             }));
             await Item.bulkWrite(operations);
             count += operations.length;
+
+        }
+
+        // Sync to Google Sheets
+        const user = await User.findOne({ email: userEmail });
+        if (user && user.googleAccessToken) {
+            // Fetch all data to sync to sheet (Source of Truth: MongoDB)
+            const allInvoices = await Invoice.find({ userEmail });
+            const allClients = await Client.find({ userEmail });
+            const allItems = await Item.find({ userEmail });
+
+            let spreadsheetId = user.googleSpreadsheetId;
+            // If no sheet ID stored, try to find it
+            if (!spreadsheetId) {
+                spreadsheetId = await findSpreadsheet(user.googleAccessToken);
+                if (spreadsheetId) {
+                    user.googleSpreadsheetId = spreadsheetId;
+                    await user.save();
+                }
+            }
+
+            if (spreadsheetId) {
+                await updateSheetData(user.googleAccessToken, spreadsheetId, {
+                    invoices: allInvoices,
+                    clients: allClients,
+                    items: allItems
+                });
+            }
         }
 
         return NextResponse.json({ success: true, message: 'Sync successful', count });
