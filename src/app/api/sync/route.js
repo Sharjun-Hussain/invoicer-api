@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
-import Invoice from '@/models/Invoice';
-import Client from '@/models/Client';
-import Item from '@/models/Item';
 import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
-import { updateSheetData, findSpreadsheet } from '@/lib/googleSheets';
+import { updateSheetData, findSpreadsheet, getSheetData } from '@/lib/googleSheets';
 
 export async function POST(req) {
     try {
         await connectToDatabase();
 
-        // Basic Auth Check (You might want to use middleware)
+        // Basic Auth Check
         const authHeader = req.headers.get('authorization');
         if (!authHeader) {
             return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -25,82 +22,43 @@ export async function POST(req) {
 
         const { invoices, clients, items } = await req.json();
         const userEmail = decoded.email;
-        let count = 0;
         let responseData = { success: true, message: 'Sync successful' };
 
-        // Invoices
-        if (Array.isArray(invoices) && invoices.length > 0) {
-            const operations = invoices.map(inv => ({
-                updateOne: {
-                    filter: { id: inv.id, userEmail },
-                    update: { $set: { ...inv, userEmail } },
-                    upsert: true
-                }
-            }));
-            await Invoice.bulkWrite(operations);
-            count += operations.length;
+        // Get user and Google tokens
+        const user = await User.findOne({ email: userEmail }).select('+googleAccessToken');
+        if (!user || !user.googleAccessToken || !user.settings?.cloudSyncEnabled) {
+            return NextResponse.json({ success: false, message: 'Cloud sync not enabled' }, { status: 400 });
         }
 
-        // Clients
-        if (Array.isArray(clients) && clients.length > 0) {
-            const operations = clients.map(c => ({
-                updateOne: {
-                    filter: { id: c.id, userEmail },
-                    update: { $set: { ...c, userEmail } },
-                    upsert: true
-                }
-            }));
-            await Client.bulkWrite(operations);
-            count += operations.length;
-        }
-
-        // Items
-        if (Array.isArray(items) && items.length > 0) {
-            const operations = items.map(i => ({
-                updateOne: {
-                    filter: { id: i.id, userEmail },
-                    update: { $set: { ...i, userEmail } },
-                    upsert: true
-                }
-            }));
-            await Item.bulkWrite(operations);
-            count += operations.length;
-
-        }
-
-        // Sync to Google Sheets
-        const user = await User.findOne({ email: userEmail });
-        if (user && user.googleAccessToken) {
-            // Fetch all data to sync to sheet (Source of Truth: MongoDB)
-            const allInvoices = await Invoice.find({ userEmail });
-            const allClients = await Client.find({ userEmail });
-            const allItems = await Item.find({ userEmail });
-
-            let spreadsheetId = user.googleSpreadsheetId;
-            // If no sheet ID stored, try to find it
-            if (!spreadsheetId) {
-                spreadsheetId = await findSpreadsheet(user.googleAccessToken);
-                if (spreadsheetId) {
-                    user.googleSpreadsheetId = spreadsheetId;
-                    await user.save();
-                }
-            }
-
+        // Get spreadsheet ID
+        let spreadsheetId = user.googleSpreadsheetId;
+        if (!spreadsheetId) {
+            spreadsheetId = await findSpreadsheet(user.googleAccessToken);
             if (spreadsheetId) {
-                await updateSheetData(user.googleAccessToken, spreadsheetId, {
-                    invoices: allInvoices,
-                    clients: allClients,
-                    items: allItems
-                });
+                user.googleSpreadsheetId = spreadsheetId;
+                await user.save();
             }
-
-            // Add to response for two-way sync
-            responseData.invoices = allInvoices;
-            responseData.clients = allClients;
-            responseData.items = allItems;
         }
 
-        responseData.count = count;
+        if (!spreadsheetId) {
+            return NextResponse.json({ success: false, message: 'No spreadsheet found' }, { status: 404 });
+        }
+
+        // Write directly to Google Sheets (NO MongoDB)
+        await updateSheetData(user.googleAccessToken, spreadsheetId, {
+            invoices: invoices || [],
+            clients: clients || [],
+            items: items || []
+        });
+
+        // Fetch latest data from Google Sheets to return
+        const sheetData = await getSheetData(user.googleAccessToken, spreadsheetId);
+
+        responseData.invoices = sheetData.invoices || [];
+        responseData.clients = sheetData.clients || [];
+        responseData.items = sheetData.items || [];
+        responseData.count = (invoices?.length || 0) + (clients?.length || 0) + (items?.length || 0);
+
         return NextResponse.json(responseData);
     } catch (error) {
         console.error('Sync error:', error);

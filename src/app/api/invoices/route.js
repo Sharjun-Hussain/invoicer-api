@@ -1,21 +1,43 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
-import Invoice from '@/models/Invoice';
+import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
+import { getSheetData, findSpreadsheet } from '@/lib/googleSheets';
 
 export async function GET(req) {
     try {
-        await connectToDatabase();
-
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         const token = authHeader.split(' ')[1];
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const invoices = await Invoice.find({ userEmail: decoded.email });
+        const userEmail = decoded.email;
 
-        return NextResponse.json({ success: true, invoices });
+        // Fetch user to get Google tokens
+        const user = await User.findOne({ email: userEmail }).select('+googleAccessToken');
+
+        if (!user || !user.googleAccessToken || !user.settings?.cloudSyncEnabled) {
+            return NextResponse.json({ success: true, invoices: [] });
+        }
+
+        // Get spreadsheet ID
+        let spreadsheetId = user.googleSpreadsheetId;
+        if (!spreadsheetId) {
+            spreadsheetId = await findSpreadsheet(user.googleAccessToken);
+            if (spreadsheetId) {
+                user.googleSpreadsheetId = spreadsheetId;
+                await user.save();
+            }
+        }
+
+        if (!spreadsheetId) {
+            return NextResponse.json({ success: true, invoices: [] });
+        }
+
+        // Fetch directly from Google Sheets (NO MongoDB)
+        const sheetData = await getSheetData(user.googleAccessToken, spreadsheetId);
+
+        return NextResponse.json({ success: true, invoices: sheetData.invoices || [] });
     } catch (error) {
         console.error('Get invoices error:', error);
         return NextResponse.json({ success: false, message: 'Failed to fetch invoices' }, { status: 500 });
