@@ -21,7 +21,8 @@ export async function GET(req) {
             settings: {
                 company: user.companySettings || {},
                 invoice: user.invoiceSettings || {},
-                sessionTimeout: user.settings?.sessionTimeout
+                sessionTimeout: user.settings?.sessionTimeout,
+                cloudSyncEnabled: user.settings?.cloudSyncEnabled || false
             }
         });
     } catch (error) {
@@ -46,6 +47,7 @@ export async function PUT(req) {
         if (settings.company) update.companySettings = settings.company;
         if (settings.invoice) update.invoiceSettings = settings.invoice;
         if (settings.sessionTimeout) update['settings.sessionTimeout'] = settings.sessionTimeout;
+        if (settings.cloudSyncEnabled !== undefined) update['settings.cloudSyncEnabled'] = settings.cloudSyncEnabled;
 
         await User.findOneAndUpdate(
             { email: decoded.email },
