@@ -26,6 +26,7 @@ export async function POST(req) {
         const { invoices, clients, items } = await req.json();
         const userEmail = decoded.email;
         let count = 0;
+        let responseData = { success: true, message: 'Sync successful' };
 
         // Invoices
         if (Array.isArray(invoices) && invoices.length > 0) {
@@ -92,9 +93,15 @@ export async function POST(req) {
                     items: allItems
                 });
             }
+
+            // Add to response for two-way sync
+            responseData.invoices = allInvoices;
+            responseData.clients = allClients;
+            responseData.items = allItems;
         }
 
-        return NextResponse.json({ success: true, message: 'Sync successful', count });
+        responseData.count = count;
+        return NextResponse.json(responseData);
     } catch (error) {
         console.error('Sync error:', error);
         return NextResponse.json({ success: false, message: 'Sync failed' }, { status: 500 });
