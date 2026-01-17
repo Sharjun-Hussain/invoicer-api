@@ -43,6 +43,10 @@ export async function GET(req) {
         return NextResponse.json({ success: true, clients: sheetData.clients || [] });
     } catch (error) {
         console.error('Get clients error:', error);
-        return NextResponse.json({ success: false, message: 'Failed to fetch clients' }, { status: 500 });
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to fetch clients',
+            error: error.message
+        }, { status: 500 });
     }
 }

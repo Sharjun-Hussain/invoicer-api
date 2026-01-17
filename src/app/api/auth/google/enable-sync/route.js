@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
-import Invoice from '@/models/Invoice';
-import Client from '@/models/Client';
-import Item from '@/models/Item';
 import { verifyJwt } from '@/lib/auth';
 import { findOrCreateSpreadsheet, getSheetData } from '@/lib/googleSheets';
 
@@ -38,40 +35,6 @@ export async function POST(req) {
 
         if (spreadsheetId) {
             data = await getSheetData(accessToken, spreadsheetId);
-
-            // Store in DB
-            if (data.invoices.length > 0) {
-                const invoiceOps = data.invoices.map(inv => ({
-                    updateOne: {
-                        filter: { id: inv.id, userEmail },
-                        update: { $set: { ...inv, userEmail } },
-                        upsert: true
-                    }
-                }));
-                await Invoice.bulkWrite(invoiceOps);
-            }
-
-            if (data.clients.length > 0) {
-                const clientOps = data.clients.map(c => ({
-                    updateOne: {
-                        filter: { id: c.id, userEmail },
-                        update: { $set: { ...c, userEmail } },
-                        upsert: true
-                    }
-                }));
-                await Client.bulkWrite(clientOps);
-            }
-
-            if (data.items.length > 0) {
-                const itemOps = data.items.map(i => ({
-                    updateOne: {
-                        filter: { id: i.id, userEmail },
-                        update: { $set: { ...i, userEmail } },
-                        upsert: true
-                    }
-                }));
-                await Item.bulkWrite(itemOps);
-            }
         }
 
         return NextResponse.json({
