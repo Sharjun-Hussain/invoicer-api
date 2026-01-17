@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
 import { getSheetData, findOrCreateSpreadsheet } from '@/lib/googleSheets';
 
 export async function GET(req) {
     try {
+        await connectToDatabase();
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         const token = authHeader.split(' ')[1];
@@ -40,6 +42,10 @@ export async function GET(req) {
         return NextResponse.json({ success: true, invoices: sheetData.invoices || [] });
     } catch (error) {
         console.error('Get invoices error:', error);
-        return NextResponse.json({ success: false, message: 'Failed to fetch invoices' }, { status: 500 });
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to fetch invoices',
+            error: error.message
+        }, { status: 500 });
     }
 }
