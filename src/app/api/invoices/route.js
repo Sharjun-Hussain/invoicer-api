@@ -10,7 +10,7 @@ export async function GET(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id; // Using ID from token instead of email lookup
+        const userId = decoded.userId; // Using userId from token
 
         // Fetch from Turso
         const invoices = await tursoDb.getInvoices(userId);
