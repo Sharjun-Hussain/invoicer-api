@@ -11,7 +11,7 @@ export async function PUT(req, { params }) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id || decoded.email;
+        const userId = decoded.userId;
         const itemData = await req.json();
 
         if (itemData.id && String(itemData.id) !== id) {
@@ -42,7 +42,7 @@ export async function DELETE(req, { params }) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id || decoded.email;
+        const userId = decoded.userId;
 
         await ensureUser(userId, decoded.email);
         await deleteItem(userId, id);

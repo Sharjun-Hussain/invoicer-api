@@ -10,7 +10,9 @@ export async function GET(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id || decoded.email; // Use email as ID if ID is missing
+        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
+
+        const userId = decoded.userId; // Use userId from token
 
         const clients = await getClients(userId);
 
@@ -33,7 +35,9 @@ export async function POST(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id || decoded.email;
+        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
+
+        const userId = decoded.userId;
         const clientData = await req.json();
 
         // Ensure user exists in Turso

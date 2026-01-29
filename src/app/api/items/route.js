@@ -10,7 +10,7 @@ export async function GET(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id || decoded.email;
+        const userId = decoded.userId;
 
         const items = await getItems(userId);
 
@@ -33,7 +33,7 @@ export async function POST(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id || decoded.email;
+        const userId = decoded.userId;
         const itemData = await req.json();
 
         await ensureUser(userId, decoded.email);
