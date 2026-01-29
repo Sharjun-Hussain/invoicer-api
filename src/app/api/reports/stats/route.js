@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
-import Invoice from '@/models/Invoice';
 import { verifyJwt } from '@/lib/auth';
+import tursoDb from '@/lib/tursoDb';
 
 export async function GET(req) {
     try {
-        await connectToDatabase();
-
         const authHeader = req.headers.get('authorization');
         if (!authHeader) {
             return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -18,23 +15,23 @@ export async function GET(req) {
             return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
         }
 
-        const userEmail = decoded.email;
+        const userId = decoded.userId;
         const { searchParams } = new URL(req.url);
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
         const status = searchParams.get('status');
 
-        let query = { userEmail };
+        // Fetch all invoices for user from Turso
+        let invoices = await tursoDb.getInvoices(userId);
 
+        // Filter in memory
         if (startDate && endDate) {
-            query.date = { $gte: startDate, $lte: endDate };
+            invoices = invoices.filter(inv => inv.date >= startDate && inv.date <= endDate);
         }
 
         if (status && status !== 'all') {
-            query.status = status;
+            invoices = invoices.filter(inv => inv.status === status);
         }
-
-        const invoices = await Invoice.find(query);
 
         // Calculate Stats
         const totalRevenue = invoices

@@ -26,7 +26,7 @@ export async function GET(req) {
             return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
         }
 
-        const user = await User.findOne({ email: decoded.email });
+        const user = await User.findById(decoded.userId);
         if (!user) {
             return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
         }

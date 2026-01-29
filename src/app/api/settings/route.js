@@ -13,7 +13,7 @@ export async function GET(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const user = await User.findOne({ email: decoded.email });
+        const user = await User.findById(decoded.userId);
         if (!user) return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
 
         return NextResponse.json({
@@ -53,9 +53,10 @@ export async function PUT(req) {
         if (settings.invoice) update.invoiceSettings = settings.invoice;
         if (settings.sessionTimeout) update['settings.sessionTimeout'] = settings.sessionTimeout;
         if (settings.cloudSyncEnabled !== undefined) update['settings.cloudSyncEnabled'] = settings.cloudSyncEnabled;
+        if (settings.tursoSyncEnabled !== undefined) update['settings.tursoSyncEnabled'] = settings.tursoSyncEnabled;
 
-        await User.findOneAndUpdate(
-            { email: decoded.email },
+        await User.findByIdAndUpdate(
+            decoded.userId,
             { $set: update }
         );
 
