@@ -33,18 +33,26 @@ export async function GET(req) {
             invoices = invoices.filter(inv => inv.status === status);
         }
 
+        // Robust amount parsing
+        const parseAmount = (amt) => {
+            if (amt === null || amt === undefined) return 0;
+            if (typeof amt === 'number') return amt;
+            const cleanAmt = amt.toString().replace(/[^\d.-]/g, '');
+            return parseFloat(cleanAmt) || 0;
+        };
+
         // Calculate Stats
         const totalRevenue = invoices
             .filter(inv => inv.status === 'Paid')
-            .reduce((sum, inv) => sum + (parseFloat(inv.grandTotal) || 0), 0);
+            .reduce((sum, inv) => sum + parseAmount(inv.grandTotal), 0);
 
         const pendingAmount = invoices
             .filter(inv => inv.status === 'Pending')
-            .reduce((sum, inv) => sum + (parseFloat(inv.grandTotal) || 0), 0);
+            .reduce((sum, inv) => sum + parseAmount(inv.grandTotal), 0);
 
         const overdueAmount = invoices
             .filter(inv => inv.status === 'Overdue')
-            .reduce((sum, inv) => sum + (parseFloat(inv.grandTotal) || 0), 0);
+            .reduce((sum, inv) => sum + parseAmount(inv.grandTotal), 0);
 
         return NextResponse.json({
             success: true,

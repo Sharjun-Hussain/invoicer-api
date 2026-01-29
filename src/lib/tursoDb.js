@@ -134,6 +134,17 @@ export async function ensureUser(userId, email) {
 }
 
 /**
+ * Robustly parse amount from string, handling commas and currency symbols
+ */
+function parseAmount(amt) {
+    if (amt === null || amt === undefined) return 0;
+    if (typeof amt === 'number') return amt;
+    // Remove everything except digits, decimal point, and minus sign
+    const cleanAmt = amt.toString().replace(/[^\d.-]/g, '');
+    return parseFloat(cleanAmt) || 0;
+}
+
+/**
  * Sync invoices to Turso
  */
 export async function syncInvoices(userId, invoices) {
@@ -159,7 +170,7 @@ export async function syncInvoices(userId, invoices) {
                 userId,
                 invoice.date || '',
                 invoice.clientName || invoice.billTo?.name || '',
-                invoice.total || parseFloat(invoice.grandTotal || 0) || 0,
+                invoice.total || parseAmount(invoice.grandTotal),
                 invoice.status || '',
                 JSON.stringify(invoice),
                 now
