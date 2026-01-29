@@ -34,7 +34,7 @@ export async function POST(req) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id;
+        const userId = decoded.userId;
         const body = await req.json();
 
         // Ensure user exists in Turso

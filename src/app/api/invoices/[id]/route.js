@@ -10,7 +10,7 @@ export async function PUT(req, { params }) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id;
+        const userId = decoded.userId;
         const { id } = params;
         const body = await req.json();
 
@@ -42,7 +42,7 @@ export async function DELETE(req, { params }) {
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userId = decoded.id;
+        const userId = decoded.userId;
         const { id } = params;
 
         await tursoDb.deleteInvoice(userId, id);
