@@ -1,32 +1,10 @@
 import { NextResponse } from 'next/server';
 import { verifyJwt } from '@/lib/auth';
-import { getClients, syncClients, ensureUser } from '@/lib/tursoDb';
+import { syncItems, deleteItem, ensureUser } from '@/lib/tursoDb';
 
-export async function GET(req) {
+export async function PUT(req, { params }) {
     try {
-        const authHeader = req.headers.get('authorization');
-        if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-        const token = authHeader.split(' ')[1];
-        const decoded = verifyJwt(token);
-        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
-
-        const userId = decoded.id || decoded.email; // Use email as ID if ID is missing
-
-        const clients = await getClients(userId);
-
-        return NextResponse.json({ success: true, clients });
-    } catch (error) {
-        console.error('Get clients error:', error);
-        return NextResponse.json({
-            success: false,
-            message: 'Failed to fetch clients',
-            error: error.message
-        }, { status: 500 });
-    }
-}
-
-export async function POST(req) {
-    try {
+        const { id } = params;
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         const token = authHeader.split(' ')[1];
@@ -34,21 +12,47 @@ export async function POST(req) {
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
         const userId = decoded.id || decoded.email;
-        const clientData = await req.json();
+        const itemData = await req.json();
 
-        // Ensure user exists in Turso
+        if (itemData.id && String(itemData.id) !== id) {
+            return NextResponse.json({ success: false, message: 'ID mismatch' }, { status: 400 });
+        }
+        itemData.id = id;
+
         await ensureUser(userId, decoded.email);
+        await syncItems(userId, [itemData]);
 
-        // Sync (Upsert) the client
-        // Wrap in array because syncClients expects an array
-        await syncClients(userId, [clientData]);
-
-        return NextResponse.json({ success: true, client: clientData });
+        return NextResponse.json({ success: true, item: itemData });
     } catch (error) {
-        console.error('Create client error:', error);
+        console.error('Update item error:', error);
         return NextResponse.json({
             success: false,
-            message: 'Failed to create client',
+            message: 'Failed to update item',
+            error: error.message
+        }, { status: 500 });
+    }
+}
+
+export async function DELETE(req, { params }) {
+    try {
+        const { id } = params;
+        const authHeader = req.headers.get('authorization');
+        if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        const token = authHeader.split(' ')[1];
+        const decoded = verifyJwt(token);
+        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
+
+        const userId = decoded.id || decoded.email;
+
+        await ensureUser(userId, decoded.email);
+        await deleteItem(userId, id);
+
+        return NextResponse.json({ success: true, message: 'Item deleted' });
+    } catch (error) {
+        console.error('Delete item error:', error);
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to delete item',
             error: error.message
         }, { status: 500 });
     }

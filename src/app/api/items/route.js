@@ -1,50 +1,50 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
-import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
-import { getSheetData, findOrCreateSpreadsheet } from '@/lib/googleSheets';
+import { getItems, syncItems, ensureUser } from '@/lib/tursoDb';
 
 export async function GET(req) {
     try {
-        await connectToDatabase();
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         const token = authHeader.split(' ')[1];
         const decoded = verifyJwt(token);
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
-        const userEmail = decoded.email;
+        const userId = decoded.id || decoded.email;
 
-        // Fetch user to get Google tokens
-        const user = await User.findOne({ email: userEmail }).select('+googleAccessToken');
+        const items = await getItems(userId);
 
-        if (!user || !user.googleAccessToken || !user.settings?.cloudSyncEnabled) {
-            return NextResponse.json({ success: true, items: [] });
-        }
-
-        // Get spreadsheet ID (create if doesn't exist)
-        let spreadsheetId = user.googleSpreadsheetId;
-        if (!spreadsheetId) {
-            spreadsheetId = await findOrCreateSpreadsheet(user.googleAccessToken);
-            if (spreadsheetId) {
-                user.googleSpreadsheetId = spreadsheetId;
-                await user.save();
-            }
-        }
-
-        if (!spreadsheetId) {
-            return NextResponse.json({ success: true, items: [] });
-        }
-
-        // Fetch directly from Google Sheets (NO MongoDB)
-        const sheetData = await getSheetData(user.googleAccessToken, spreadsheetId);
-
-        return NextResponse.json({ success: true, items: sheetData.items || [] });
+        return NextResponse.json({ success: true, items });
     } catch (error) {
         console.error('Get items error:', error);
         return NextResponse.json({
             success: false,
             message: 'Failed to fetch items',
+            error: error.message
+        }, { status: 500 });
+    }
+}
+
+export async function POST(req) {
+    try {
+        const authHeader = req.headers.get('authorization');
+        if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        const token = authHeader.split(' ')[1];
+        const decoded = verifyJwt(token);
+        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
+
+        const userId = decoded.id || decoded.email;
+        const itemData = await req.json();
+
+        await ensureUser(userId, decoded.email);
+        await syncItems(userId, [itemData]);
+
+        return NextResponse.json({ success: true, item: itemData });
+    } catch (error) {
+        console.error('Create item error:', error);
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to create item',
             error: error.message
         }, { status: 500 });
     }

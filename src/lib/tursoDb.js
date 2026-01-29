@@ -374,6 +374,44 @@ export async function performFullSync(userId, email, localData) {
     }
 }
 
+/**
+ * Soft delete client
+ */
+export async function deleteClient(userId, clientId) {
+    const client = getTursoClient();
+    const now = Math.floor(Date.now() / 1000);
+
+    try {
+        await client.execute({
+            sql: 'UPDATE clients SET deleted = 1, updated_at = ? WHERE id = ? AND user_id = ?',
+            args: [now, clientId, userId]
+        });
+        return true;
+    } catch (error) {
+        console.error('Error deleting client:', error);
+        throw error;
+    }
+}
+
+/**
+ * Soft delete item
+ */
+export async function deleteItem(userId, itemId) {
+    const client = getTursoClient();
+    const now = Math.floor(Date.now() / 1000);
+
+    try {
+        await client.execute({
+            sql: 'UPDATE items SET deleted = 1, updated_at = ? WHERE id = ? AND user_id = ?',
+            args: [now, itemId, userId]
+        });
+        return true;
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        throw error;
+    }
+}
+
 export default {
     getTursoClient,
     initializeSchema,
@@ -385,5 +423,7 @@ export default {
     getClients,
     getItems,
     updateSyncMetadata,
-    performFullSync
+    performFullSync,
+    deleteClient,
+    deleteItem
 };
