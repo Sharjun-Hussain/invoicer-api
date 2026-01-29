@@ -22,9 +22,12 @@ export async function GET(req) {
                 company: user.companySettings || {},
                 invoice: user.invoiceSettings || {},
                 sessionTimeout: user.settings?.sessionTimeout,
-                cloudSyncEnabled: user.settings?.cloudSyncEnabled || false,
+                cloudSyncEnabled: user.settings?.cloudSyncEnabled || false, // Legacy Google Sheets
+                tursoSyncEnabled: user.settings?.tursoSyncEnabled || false, // New Turso
                 isGoogleConnected: !!user.googleAccessToken,
-                googleEmail: user.googleEmail
+                googleEmail: user.googleEmail,
+                lastSyncTime: user.lastSyncTime,
+                needsMigration: !!(user.googleAccessToken && user.googleSpreadsheetId && !user.settings?.tursoSyncEnabled)
             }
         });
     } catch (error) {

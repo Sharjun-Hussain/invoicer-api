@@ -47,13 +47,15 @@ const UserSchema = new Schema(
     },
     settings: {
       sessionTimeout: { type: String, default: '2hours' },
-      cloudSyncEnabled: { type: Boolean, default: false },
+      cloudSyncEnabled: { type: Boolean, default: false }, // Legacy - for Google Sheets
+      tursoSyncEnabled: { type: Boolean, default: false }, // New - for Turso
     },
     // Cloud Sync & Settings
-    googleAccessToken: { type: String, select: false },
-    googleRefreshToken: { type: String, select: false },
-    googleEmail: { type: String },
-    googleSpreadsheetId: { type: String }, // Store the sheet ID to reuse
+    googleAccessToken: { type: String, select: false }, // Keep for export feature
+    googleRefreshToken: { type: String, select: false }, // Keep for export feature
+    googleEmail: { type: String }, // Keep for export feature
+    googleSpreadsheetId: { type: String }, // Keep for migration/export
+    lastSyncTime: { type: Date }, // Last Turso sync time
     companySettings: { type: Object, default: {} },
     invoiceSettings: { type: Object, default: {} },
   },

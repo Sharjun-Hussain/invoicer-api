@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { verifyJwt } from '@/lib/auth';
-import { updateSheetData, findOrCreateSpreadsheet, getSheetData } from '@/lib/googleSheets';
+import { performFullSync } from '@/lib/tursoDb';
 
 export async function POST(req) {
     try {
@@ -22,46 +22,46 @@ export async function POST(req) {
 
         const { invoices, clients, items } = await req.json();
         const userEmail = decoded.email;
-        let responseData = { success: true, message: 'Sync successful' };
 
-        // Get user and Google tokens
-        const user = await User.findOne({ email: userEmail }).select('+googleAccessToken');
-        if (!user || !user.googleAccessToken || !user.settings?.cloudSyncEnabled) {
+        // Get user
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+            return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+        }
+
+        // Check if Turso sync is enabled
+        if (!user.settings?.tursoSyncEnabled) {
             return NextResponse.json({ success: false, message: 'Cloud sync not enabled' }, { status: 400 });
         }
 
-        // Get spreadsheet ID (create if doesn't exist)
-        let spreadsheetId = user.googleSpreadsheetId;
-        if (!spreadsheetId) {
-            spreadsheetId = await findOrCreateSpreadsheet(user.googleAccessToken);
-            if (spreadsheetId) {
-                user.googleSpreadsheetId = spreadsheetId;
-                await user.save();
+        // Perform full sync with Turso
+        const syncResult = await performFullSync(
+            user._id.toString(),
+            userEmail,
+            {
+                invoices: invoices || [],
+                clients: clients || [],
+                items: items || []
             }
-        }
+        );
 
-        if (!spreadsheetId) {
-            return NextResponse.json({ success: false, message: 'No spreadsheet found' }, { status: 404 });
-        }
+        // Update user's last sync time
+        user.lastSyncTime = new Date();
+        await user.save();
 
-        // Write directly to Google Sheets (NO MongoDB)
-        await updateSheetData(user.googleAccessToken, spreadsheetId, {
-            invoices: invoices || [],
-            clients: clients || [],
-            items: items || []
+        return NextResponse.json({
+            success: true,
+            message: 'Sync successful',
+            invoices: syncResult.invoices,
+            clients: syncResult.clients,
+            items: syncResult.items,
+            count: (invoices?.length || 0) + (clients?.length || 0) + (items?.length || 0)
         });
-
-        // Fetch latest data from Google Sheets to return
-        const sheetData = await getSheetData(user.googleAccessToken, spreadsheetId);
-
-        responseData.invoices = sheetData.invoices || [];
-        responseData.clients = sheetData.clients || [];
-        responseData.items = sheetData.items || [];
-        responseData.count = (invoices?.length || 0) + (clients?.length || 0) + (items?.length || 0);
-
-        return NextResponse.json(responseData);
     } catch (error) {
         console.error('Sync error:', error);
-        return NextResponse.json({ success: false, message: 'Sync failed' }, { status: 500 });
+        return NextResponse.json({
+            success: false,
+            message: error.message || 'Sync failed'
+        }, { status: 500 });
     }
 }
