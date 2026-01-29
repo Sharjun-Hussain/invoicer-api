@@ -4,7 +4,7 @@ import { syncClients, deleteClient, ensureUser } from '@/lib/tursoDb';
 
 export async function PUT(req, { params }) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         const token = authHeader.split(' ')[1];
@@ -36,7 +36,7 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         const token = authHeader.split(' ')[1];

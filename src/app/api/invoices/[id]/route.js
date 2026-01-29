@@ -11,7 +11,7 @@ export async function PUT(req, { params }) {
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
         const userId = decoded.userId;
-        const { id } = params;
+        const { id } = await params;
         const body = await req.json();
 
         // Ensure ID matches
@@ -43,7 +43,7 @@ export async function DELETE(req, { params }) {
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
         const userId = decoded.userId;
-        const { id } = params;
+        const { id } = await params;
 
         await tursoDb.deleteInvoice(userId, id);
 
