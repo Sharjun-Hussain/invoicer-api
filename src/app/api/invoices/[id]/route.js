@@ -2,31 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyJwt } from '@/lib/auth';
 import tursoDb from '@/lib/tursoDb';
 
-export async function GET(req) {
-    try {
-        const authHeader = req.headers.get('authorization');
-        if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-        const token = authHeader.split(' ')[1];
-        const decoded = verifyJwt(token);
-        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
-
-        const userId = decoded.id; // Using ID from token instead of email lookup
-
-        // Fetch from Turso
-        const invoices = await tursoDb.getInvoices(userId);
-
-        return NextResponse.json({ success: true, invoices });
-    } catch (error) {
-        console.error('Get invoices error:', error);
-        return NextResponse.json({
-            success: false,
-            message: 'Failed to fetch invoices',
-            error: error.message
-        }, { status: 500 });
-    }
-}
-
-export async function POST(req) {
+export async function PUT(req, { params }) {
     try {
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -35,26 +11,48 @@ export async function POST(req) {
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
         const userId = decoded.id;
+        const { id } = params;
         const body = await req.json();
 
-        // Ensure user exists in Turso
-        await tursoDb.ensureUser(userId, decoded.email);
+        // Ensure ID matches
+        if (body.id && body.id !== id) {
+            return NextResponse.json({ success: false, message: 'ID mismatch' }, { status: 400 });
+        }
 
-        // Handle single invoice or array
-        const invoicesToSync = Array.isArray(body) ? body : [body];
+        const invoiceData = { ...body, id };
 
-        await tursoDb.syncInvoices(userId, invoicesToSync);
+        await tursoDb.syncInvoices(userId, [invoiceData]);
 
-        return NextResponse.json({
-            success: true,
-            message: 'Invoices synced successfully',
-            invoice: !Array.isArray(body) ? body : undefined
-        });
+        return NextResponse.json({ success: true, message: 'Invoice updated', invoice: invoiceData });
     } catch (error) {
-        console.error('Create invoice error:', error);
+        console.error('Update invoice error:', error);
         return NextResponse.json({
             success: false,
-            message: 'Failed to create invoice',
+            message: 'Failed to update invoice',
+            error: error.message
+        }, { status: 500 });
+    }
+}
+
+export async function DELETE(req, { params }) {
+    try {
+        const authHeader = req.headers.get('authorization');
+        if (!authHeader) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        const token = authHeader.split(' ')[1];
+        const decoded = verifyJwt(token);
+        if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
+
+        const userId = decoded.id;
+        const { id } = params;
+
+        await tursoDb.deleteInvoice(userId, id);
+
+        return NextResponse.json({ success: true, message: 'Invoice deleted' });
+    } catch (error) {
+        console.error('Delete invoice error:', error);
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to delete invoice',
             error: error.message
         }, { status: 500 });
     }

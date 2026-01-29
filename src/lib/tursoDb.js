@@ -412,6 +412,25 @@ export async function deleteItem(userId, itemId) {
     }
 }
 
+/**
+ * Soft delete invoice
+ */
+export async function deleteInvoice(userId, invoiceId) {
+    const client = getTursoClient();
+    const now = Math.floor(Date.now() / 1000);
+
+    try {
+        await client.execute({
+            sql: 'UPDATE invoices SET deleted = 1, updated_at = ? WHERE id = ? AND user_id = ?',
+            args: [now, invoiceId, userId]
+        });
+        return true;
+    } catch (error) {
+        console.error('Error deleting invoice:', error);
+        throw error;
+    }
+}
+
 export default {
     getTursoClient,
     initializeSchema,
@@ -425,5 +444,6 @@ export default {
     updateSyncMetadata,
     performFullSync,
     deleteClient,
-    deleteItem
+    deleteItem,
+    deleteInvoice
 };
