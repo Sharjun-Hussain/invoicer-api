@@ -158,8 +158,8 @@ export async function syncInvoices(userId, invoices) {
                 invoice.id,
                 userId,
                 invoice.date || '',
-                invoice.clientName || '',
-                invoice.total || 0,
+                invoice.clientName || invoice.billTo?.name || '',
+                invoice.total || parseFloat(invoice.grandTotal || 0) || 0,
                 invoice.status || '',
                 JSON.stringify(invoice),
                 now
