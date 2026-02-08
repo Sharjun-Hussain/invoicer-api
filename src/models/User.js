@@ -12,6 +12,8 @@ const UserSchema = new Schema(
       required: [true, "Email is required"],
     },
     isEmailVerified: { type: Boolean, default: false },
+    googleId: { type: String, unique: true, sparse: true },
+    facebookId: { type: String, unique: true, sparse: true },
     emailVerificationOTP: String,
     emailVerificationOTPExpire: Date,
     emailVerificationAttempts: { type: Number, default: 0 },
