@@ -155,15 +155,16 @@ export async function syncInvoices(userId, invoices) {
         // Use transaction for batch insert/update
         const batch = invoices.map(invoice => ({
             sql: `
-        INSERT INTO invoices (id, user_id, date, client_name, total, status, data, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (id, user_id, date, client_name, total, status, data, updated_at, deleted)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           date = excluded.date,
           client_name = excluded.client_name,
           total = excluded.total,
           status = excluded.status,
           data = excluded.data,
-          updated_at = excluded.updated_at
+          updated_at = excluded.updated_at,
+          deleted = excluded.deleted
       `,
             args: [
                 invoice.id,
@@ -173,7 +174,8 @@ export async function syncInvoices(userId, invoices) {
                 invoice.total || parseAmount(invoice.grandTotal),
                 invoice.status || '',
                 JSON.stringify(invoice),
-                now
+                now,
+                invoice.isDeleted ? 1 : 0
             ]
         }));
 
@@ -276,6 +278,25 @@ export async function getInvoices(userId) {
         return result.rows.map(row => JSON.parse(row.data));
     } catch (error) {
         console.error('Error getting invoices:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get all deleted invoices for a user (Trash)
+ */
+export async function getDeletedInvoices(userId) {
+    const client = getTursoClient();
+
+    try {
+        const result = await client.execute({
+            sql: 'SELECT data FROM invoices WHERE user_id = ? AND deleted = 1 ORDER BY updated_at DESC',
+            args: [userId]
+        });
+
+        return result.rows.map(row => JSON.parse(row.data));
+    } catch (error) {
+        console.error('Error getting deleted invoices:', error);
         throw error;
     }
 }
@@ -442,6 +463,43 @@ export async function deleteInvoice(userId, invoiceId) {
     }
 }
 
+/**
+ * Restore a soft-deleted invoice
+ */
+export async function restoreInvoice(userId, invoiceId) {
+    const client = getTursoClient();
+    const now = Math.floor(Date.now() / 1000);
+
+    try {
+        await client.execute({
+            sql: 'UPDATE invoices SET deleted = 0, updated_at = ? WHERE id = ? AND user_id = ?',
+            args: [now, invoiceId, userId]
+        });
+        return true;
+    } catch (error) {
+        console.error('Error restoring invoice:', error);
+        throw error;
+    }
+}
+
+/**
+ * Permanently delete an invoice
+ */
+export async function permanentlyDeleteInvoice(userId, invoiceId) {
+    const client = getTursoClient();
+
+    try {
+        await client.execute({
+            sql: 'DELETE FROM invoices WHERE id = ? AND user_id = ?',
+            args: [invoiceId, userId]
+        });
+        return true;
+    } catch (error) {
+        console.error('Error permanently deleting invoice:', error);
+        throw error;
+    }
+}
+
 export default {
     getTursoClient,
     initializeSchema,
@@ -450,11 +508,14 @@ export default {
     syncClients,
     syncItems,
     getInvoices,
+    getDeletedInvoices,
     getClients,
     getItems,
     updateSyncMetadata,
     performFullSync,
     deleteClient,
     deleteItem,
-    deleteInvoice
+    deleteInvoice,
+    restoreInvoice,
+    permanentlyDeleteInvoice
 };

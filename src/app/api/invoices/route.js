@@ -11,9 +11,16 @@ export async function GET(req) {
         if (!decoded) return NextResponse.json({ success: false, message: 'Invalid Token' }, { status: 401 });
 
         const userId = decoded.userId; // Using userId from token
+        const { searchParams } = new URL(req.url);
+        const tab = searchParams.get('tab');
 
         // Fetch from Turso
-        const invoices = await tursoDb.getInvoices(userId);
+        let invoices;
+        if (tab === 'trash') {
+            invoices = await tursoDb.getDeletedInvoices(userId);
+        } else {
+            invoices = await tursoDb.getInvoices(userId);
+        }
 
         return NextResponse.json({ success: true, invoices });
     } catch (error) {

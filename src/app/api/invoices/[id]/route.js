@@ -44,8 +44,14 @@ export async function DELETE(req, { params }) {
 
         const userId = decoded.userId;
         const { id } = await params;
+        const { searchParams } = new URL(req.url);
+        const permanent = searchParams.get('permanent') === 'true';
 
-        await tursoDb.deleteInvoice(userId, id);
+        if (permanent) {
+            await tursoDb.permanentlyDeleteInvoice(userId, id);
+        } else {
+            await tursoDb.deleteInvoice(userId, id);
+        }
 
         return NextResponse.json({ success: true, message: 'Invoice deleted' });
     } catch (error) {
