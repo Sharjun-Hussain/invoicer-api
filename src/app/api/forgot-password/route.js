@@ -33,13 +33,15 @@ export async function POST(req) {
     const oneHourAgo = Date.now() - 3600000;
     if (user.resetPasswordLastAttempt && user.resetPasswordLastAttempt > oneHourAgo) {
       if (user.resetPasswordAttempts >= 3) {
+        const lockedUntil = new Date(user.resetPasswordLastAttempt.getTime() + 3600000);
         return NextResponse.json({
-          message: "Too many requests. Please try again later.",
-          success: false
+          message: `Too many requests. Please try again after ${lockedUntil.toLocaleTimeString()}.`,
+          success: false,
+          lockedUntil: lockedUntil.toISOString()
         }, { status: 429 });
       }
     } else {
-      // Reset attempts counter after 1 hour
+      // Reset attempts counter after 1 hour or if it's the first attempt in a while
       user.resetPasswordAttempts = 0;
     }
 

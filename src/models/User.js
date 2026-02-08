@@ -14,6 +14,8 @@ const UserSchema = new Schema(
     isEmailVerified: { type: Boolean, default: false },
     emailVerificationOTP: String,
     emailVerificationOTPExpire: Date,
+    emailVerificationAttempts: { type: Number, default: 0 },
+    emailVerificationLastAttempt: Date,
     password: {
       type: String,
       required: [true, "Password is required"],
