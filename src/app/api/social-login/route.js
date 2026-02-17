@@ -8,7 +8,8 @@ export async function POST(req) {
     try {
         const { provider, token, profile } = await req.json();
 
-        if (!provider || !token) {
+        // Allow bypassing token if profile is provided (Insecure: trusts frontend)
+        if (!provider || (!token && !profile)) {
             return NextResponse.json(
                 { message: "Provider and token are required" },
                 { status: 400 }
@@ -19,8 +20,13 @@ export async function POST(req) {
         let email;
         let name;
 
-        if (provider === "google") {
-            // Verify Google Token
+        if (profile) {
+            // TRUST FRONTEND DATA
+            socialId = profile.id;
+            email = profile.email;
+            name = profile.name;
+        } else if (provider === "google") {
+            // Verify Google Token (Original Logic)
             const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
             const ticket = await verifyRes.json();
 
