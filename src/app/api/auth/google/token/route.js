@@ -62,7 +62,8 @@ export async function POST(req) {
         return NextResponse.json({
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
-            expires_in: tokenData.expires_in
+            expires_in: tokenData.expires_in,
+            id_token: tokenData.id_token // Important for OIDC
         });
 
     } catch (error) {
