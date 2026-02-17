@@ -6,11 +6,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'our_super_secret_random_string';
 export const verifyJwt = (token) => {
   try {
     if (!token) return null;
-    
+
     // Verify the token using the secret
     const decoded = jwt.verify(token, JWT_SECRET);
     return decoded;
-    
+
   } catch (error) {
     // If token is invalid or expired, return null
     console.error("JWT Verification Error:", error.message);
@@ -22,4 +22,20 @@ export const verifyJwt = (token) => {
 export const signJwt = (payload) => {
   // Expires in 30 days (adjust as needed)
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+};
+
+// 3. Helper to extract User ID from Request (Next.js App Router)
+export const getUserIdFromToken = async (req) => {
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return null;
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = verifyJwt(token);
+    return decoded ? decoded.userId : null;
+  } catch (error) {
+    console.error("Error getting user ID from request:", error);
+    return null;
+  }
 };
