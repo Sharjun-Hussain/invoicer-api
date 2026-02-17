@@ -94,6 +94,21 @@ export async function initializeSchema() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    -- Invoice update history table
+    CREATE TABLE IF NOT EXISTS invoice_updates (
+      id TEXT PRIMARY KEY,
+      invoice_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      updated_at INTEGER DEFAULT (unixepoch()),
+      changes_summary TEXT, -- JSON blob of what changed
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    -- Add update tracking columns to invoices (if not exists)
+    -- Note: SQLite doesn't support ADD COLUMN IF NOT EXISTS, so we handle this gracefully
+    -- These will be added via migration or handled in application logic
+
     -- Indexes for performance
     CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices(user_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(date);
@@ -102,6 +117,8 @@ export async function initializeSchema() {
     CREATE INDEX IF NOT EXISTS idx_clients_deleted ON clients(deleted);
     CREATE INDEX IF NOT EXISTS idx_items_user ON items(user_id);
     CREATE INDEX IF NOT EXISTS idx_items_deleted ON items(deleted);
+    CREATE INDEX IF NOT EXISTS idx_invoice_updates_invoice ON invoice_updates(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_invoice_updates_user ON invoice_updates(user_id);
   `;
 
     // Execute schema creation
@@ -340,6 +357,55 @@ export async function getItems(userId) {
 }
 
 /**
+ * Record an invoice update in history
+ */
+export async function recordInvoiceUpdate(userId, invoiceId, changesSummary = null) {
+    const client = getTursoClient();
+    const now = Math.floor(Date.now() / 1000);
+    const updateId = `upd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+        // Insert update record
+        await client.execute({
+            sql: `INSERT INTO invoice_updates (id, invoice_id, user_id, updated_at, changes_summary)
+                  VALUES (?, ?, ?, ?, ?)`,
+            args: [updateId, invoiceId, userId, now, changesSummary ? JSON.stringify(changesSummary) : null]
+        });
+
+        return { id: updateId, updated_at: now };
+    } catch (error) {
+        console.error('Error recording invoice update:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get update history for an invoice
+ */
+export async function getInvoiceUpdateHistory(invoiceId) {
+    const client = getTursoClient();
+
+    try {
+        const result = await client.execute({
+            sql: `SELECT id, updated_at, changes_summary 
+                  FROM invoice_updates 
+                  WHERE invoice_id = ? 
+                  ORDER BY updated_at DESC`,
+            args: [invoiceId]
+        });
+
+        return result.rows.map(row => ({
+            id: row.id,
+            updated_at: row.updated_at,
+            changes_summary: row.changes_summary ? JSON.parse(row.changes_summary) : null
+        }));
+    } catch (error) {
+        console.error('Error getting invoice update history:', error);
+        return [];
+    }
+}
+
+/**
  * Update sync metadata
  */
 export async function updateSyncMetadata(userId, deviceId) {
@@ -517,5 +583,7 @@ export default {
     deleteItem,
     deleteInvoice,
     restoreInvoice,
-    permanentlyDeleteInvoice
+    permanentlyDeleteInvoice,
+    recordInvoiceUpdate,
+    getInvoiceUpdateHistory
 };

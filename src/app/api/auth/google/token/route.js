@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 
 // Get from environment variable for security
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '630293541673-gsgklutdld4brbdfgtgb1n8fnu7i6ckn.apps.googleusercontent.com';
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 export async function POST(req) {

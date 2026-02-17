@@ -35,8 +35,7 @@ export async function POST(req) {
             // Security: Verify audience (must match our client ID)
             const allowedClientIds = [
                 process.env.GOOGLE_CLIENT_ID,
-                '630293541673-gsgklutdld4brbdfgtgb1n8fnu7i6ckn.apps.googleusercontent.com', // web
-                '630293541673-odk9t97qhjkqfv5c88j4n81ttooanqbf.apps.googleusercontent.com'  // android
+                process.env.GOOGLE_CLIENT_ID_ANDROID
             ];
 
             if (ticket.aud && !allowedClientIds.includes(ticket.aud)) {
